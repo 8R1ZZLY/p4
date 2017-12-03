@@ -1,0 +1,8 @@
+import pygame 
+import os
+
+pygame.font.init()
+ola= pygame.font.Font(os.path.join(os.path.dirname(os.path.realpath(__file__)),"visitor2.ttf"),32)
+
+
+print(ola.size("coucou"))
