@@ -231,7 +231,6 @@ class Lobby(Gui):
     def log(self,message):
         return
 
-
 def run():
     #initialize
     pygame.init()
