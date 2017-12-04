@@ -71,11 +71,9 @@ class Board(Thing):
         self.height = int(0.7*screenh)
         #margin left and top
         self.marginl = int((screenw-self.width))//2
-        print(self.marginl)
         self.margint = int((screenh-self.height))//2
-        print(self.margint)
         #elt size
-        self.tilesize = int(self.width/self.w)
+        self.tilesize = self.width//self.w
         #load assets
         self.tile_yellow = self.pygame.image.load(os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','assets','coin_yellow.png')).convert()
         self.tile_yellow = self.pygame.transform.scale(self.tile_yellow,(self.tilesize,self.tilesize))
@@ -124,6 +122,24 @@ class Player(Thing):
         self.playerturn = playerturn
         if self.playerturn == 0:
             self.togglevisible()
+        self.screenw , self.screenh = Factory.windowsize()
+        self.playersupport = [0]*self.board.w  #it is an array to choose the column to play
+        self.playersupport[0]=1
+        self.playerhand = self.pygame.image.load(os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','assets','coin_yellow.png')).convert()
+        self.playerhand = self.pygame.transform.scale(self.tile_yellow,(self.tilesize,self.tilesize))
+        
+        self.width = int(0.4*screenw)
+        self.height = self.width // self.board.w
+
+        self.x = int((self.screenw-self.width))//2
+        self.y = 5
+    def render(self):
+        if(self.isvisible()):
+            for i in range(self.board.w):
+                if(self.playersupport[i] == 1):
+                    self.screen.blit(self.playerhand[i],(i*self.board.tilesize+self.x,y))
+                if(self.playersupport[i] == 2):
+                    self.screen.blit(self.playerhand[i],(i*self.board.tilesize+self.x,y))
 
     #move player left or right
     def move(self,direction):
@@ -134,6 +150,16 @@ class Player(Thing):
                 self.position = board.w-1
             else:
                 self.position = self.position-1
+        index = self.playersupport.index(1)
+        self.playersupport[index]=0
+        self.playersupport[self.position]=1
+
+    #move the enemy cursor
+    def moveenemy(self,newpos):
+        index = self.playersupport.index(2)
+        self.playersupport[index] = 0
+        self.playersupport[newpos] = 2
+
     #setposition from outside
     def setposition(self,position):
         if position < 0 and position >= self.board.w:
@@ -154,7 +180,6 @@ class Player(Thing):
         self.playerturn= (self.playerturn +1)%numberofplayer
 
 
-
 ##Gui
 class Gui(Thing):
     def __init__(self,screen,pygame,x=0,y=0,z=0):
@@ -172,7 +197,10 @@ class PlayerGUI(Text):
     def __init__(self,pygame,screen,playername,score,playernumber,font="visitor2.ttf",x=0,y=0,z=0,size=18):
         super().__init__(pygame,screen,x,y,z,playername,font,32)
         #font
-        self.fontobj = self.pygame.font.Font(os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','assets',self.font), self.size)      
+        self.pygame = pygame # i don't know why but in the great mother classes subobject was not initialized
+        self.screen = screen
+        font_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','assets','visitor2.ttf')
+        self.fontobj = self.pygame.font.Font(font_path, self.size)
         #...
         self.textw, self.texth = self.fontobj.size(self.text)
         self.w = self.textw+2+15
@@ -191,24 +219,28 @@ class PlayerGUI(Text):
         if playernumber == 0:
             self.x = int(self.screenw*0.3 - self.w)//2
         elif playernumber == 1:
-            self.x = int(self.screenw*0.3 - self.w)//2 + int(self.w*0.4)
-        self.y = int(self.screenh - self.h)//2
+            self.x = int(self.screenw*0.3 - self.w)//2 + int(self.screenw*0.4+self.screenw*0.3)
+        self.y = int(self.screenh - self.h)//2 - 20
     #display the object
     def render(self):
         x = self.x
         y = self.y
-        scoretext=2150
-        scoretext = str(scoretext)
+        
+        scoretext = str(self.score)
         if self.isvisible():
-            self.screen.blit(self.rect,(x,y))
-            playername = fontobj.render(self.text,1,(255,255,255))
-            self.screen.blit(playername,(x+2+15,y))
+            self.screen.blit(self.rect,(x,y+5))
+            playername = self.fontobj.render(self.text,1,(255,255,255))
+            self.screen.blit(playername,(x+5+15,y))
 
-            self.textw, self.texth = self.font.size(scoretext)
-            score = fontobj.render(scoretext,1,(255,255,255))
+            self.textw, self.texth = self.fontobj.size(scoretext)
+            score = self.fontobj.render(scoretext,1,(255,255,255))
 
             scorex,scorey = self.fontobj.size(scoretext)
-            x= int(self.screenw*0.3-scorex)//2
+            
+            if self.playernumber == 0:
+                x= int(self.screenw*0.3-scorex)//2
+            elif self.playernumber == 1:
+                x = int(self.screenw*0.3-scorex)//2 + int(self.screenw*0.4+self.screenw*0.3)
             self.screen.blit(score,(x,y+scorey))
 
 ###Image for decoration
@@ -238,10 +270,17 @@ def run():
     screen = pygame.display.set_mode(Factory.windowsize(),HWSURFACE|DOUBLEBUF)#RESIZABLE
     pygame.display.set_caption('Puissance 4')
 
+    font_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','assets','visitor2.ttf')
+    font_size = 32
+    fontobj = pygame.font.Font(font_path, font_size)
+
     #set the Object
     #background = pygame.image.load('background.jpg')
     board = Board(pygame,screen)
     p = Player(pygame,screen,board)
+    playergui1 = PlayerGUI(pygame,screen,"player 1","1367",0)
+    playergui2 = PlayerGUI(pygame,screen,"player 2","1517",1)
+
     p.move(1)
     print(p.position)
     pygame.display.flip()
@@ -252,6 +291,8 @@ def run():
         event = pygame.event.wait()
         screen.fill((0, 0, 0))
         board.render()
+        playergui1.render()
+        playergui2.render()
         
         # Leave the game if press Quit
         if event.type == pygame.QUIT:
