@@ -6,15 +6,24 @@ import pygame.color
 import os
 from pygame.locals import *
 
-#Factory
 
 
-#return the line to play if the column is playable or a number lower than 0 if it is not playable
+#Enumeration
+
+#BoardBox is the status of the case
+class BoardBox(Enum):
+    EMPTY = 0
+    PLAYER1 = 1 #BB2330 red
+    PLAYER2 = 2 #FDC500 yellow
+
+
+
+#Factory return the line to play if the column is playable or a number lower than 0 if it is not playable
 class Factory():
     #whichrow is playable in this column
     def whichrow(column):
         for hplay in reversed(range(0,len(column))):
-            if column[hplay] == BoardBox.EMPTY:
+            if column[hplay] == BoardBox.EMPTY.value:
                 return hplay
         return -1
     def bloc2pixel():
@@ -24,14 +33,6 @@ class Factory():
     #window size !
     def windowsize():
         return 800, 400
-
-#Enumeration
-
-#BoardBox is the status of the case
-class BoardBox(Enum):
-    EMPTY = 0
-    PLAYER1 = 1 #BB2330 red
-    PLAYER2 = 2 #FDC500 yellow
 
 #Thing is the very great mother class
 class Thing:
@@ -81,25 +82,28 @@ class Board(Thing):
         self.tile_red = self.pygame.transform.scale(self.tile_red,(self.tilesize,self.tilesize))
         self.tile_white = self.pygame.image.load(os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','assets','coin_white.png')).convert()
         self.tile_white = self.pygame.transform.scale(self.tile_white,(self.tilesize,self.tilesize))
+        self.tile = [self.tile_white,self.tile_yellow,self.tile_red]
         # w columns and h rows
-        self.board = [[BoardBox.EMPTY]*self.h]*self.w
-        self.board = [[0,0,0,0,0,1],[0,0,0,0,0,2],[0,0,0,0,0,2],[0,0,0,0,0,2],[0,0,0,0,1,1],[0,0,0,0,1,2],[0,0,0,0,0,1]]
+        #self.board = [[0,0,0,0,0,1],[0,0,0,0,0,2],[0,0,0,0,0,2],[0,0,0,0,0,2],[0,0,0,0,1,1],[0,0,0,0,1,2],[0,0,0,0,0,1]]
+        self.board = [[0 for i in range(self.h)] for j in range(self.w)]
+        
     #load 
-    def load(self,board=[]):
-        if len(board)>0:
-            self.board = board
+    def load(self,board):
         #parse and construct the board
-        for i in range(len(self.board)):
-            for j in range(len(self.board[0])):
-                if(board[i][j] == 0):
-                    self.screen.blit(self.tile_white,(i*self.tilesize+self.marginl,j*self.tilesize+self.margint))
-                if(board[i][j] == 1):
-                    self.screen.blit(self.tile_yellow,(i*self.tilesize+self.marginl,j*self.tilesize+self.margint))
-                if(board[i][j] == 2):
-                    self.screen.blit(self.tile_red,(i*self.tilesize+self.marginl,j*self.tilesize+self.margint))
+        return
+        #self.logboard(board)
+    #print the board on console 
+    def logboard(self,board):
+        print('')
+        for j in range(self.h):  
+            print("")
+            for i in range(self.w):
+                print(board[i][j],end=' ')
+        print("")
     #set one case
     def setcase(self,w,h,s):
         self.board[w][h]=s
+        
     #is the board full ?
     def isfull(self):
         for c in range(0,self.w):
@@ -109,13 +113,15 @@ class Board(Thing):
     #render the board on the screen
     def render(self):
         if self.isvisible():
-            self.load(self.board)
-            return
-
+            for i in range(self.w):
+                for j in range(self.h):
+                    self.screen.blit(self.tile[self.board[i][j]],(i*self.tilesize+self.marginl,j*self.tilesize+self.margint))
 
 class Player(Thing):
-    def __init__(self,pygame,screen,board,position=0,x=0,player=1,playerturn=0):
+    def __init__(self,pygame,screen,board,position=0,x=0,player=1,playerturn=1):
         super().__init__(pygame,screen,x)
+        self.pygame = pygame
+        self.screen = screen
         self.player = player
         self.position = position
         self.board = board
@@ -125,35 +131,47 @@ class Player(Thing):
         self.screenw , self.screenh = Factory.windowsize()
         self.playersupport = [0]*self.board.w  #it is an array to choose the column to play
         self.playersupport[0]=1
-        self.playerhand = self.pygame.image.load(os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','assets','coin_yellow.png')).convert()
-        self.playerhand = self.pygame.transform.scale(self.tile_yellow,(self.tilesize,self.tilesize))
         
-        self.width = int(0.4*screenw)
-        self.height = self.width // self.board.w
+        if player == 1:
+            self.playerhand = self.pygame.image.load(os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','assets','arrow_p1.png')).convert()
+        elif player == 2:
+            self.playerhand = self.pygame.image.load(os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','assets','arrow_p2.png')).convert()
+        elif player == 3:
+            self.playerhand = self.pygame.image.load(os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','assets','arrow_p3.png')).convert()
+        
+        self.playerhand = self.pygame.transform.scale(self.playerhand,(self.board.tilesize,self.board.tilesize))
+        self.width = int(0.4*self.screenw)
+        self.height = self.board.tilesize
 
         self.x = int((self.screenw-self.width))//2
         self.y = 5
     def render(self):
         if(self.isvisible()):
-            for i in range(self.board.w):
-                if(self.playersupport[i] == 1):
-                    self.screen.blit(self.playerhand[i],(i*self.board.tilesize+self.x,y))
-                if(self.playersupport[i] == 2):
-                    self.screen.blit(self.playerhand[i],(i*self.board.tilesize+self.x,y))
+            self.playerhand.set_alpha(255)
+        else:
+            self.playerhand.set_alpha(50)
+
+        for i in range(self.board.w):
+            if(self.playersupport[i] == 1):
+                self.screen.blit(self.playerhand,(i*self.board.tilesize+self.x,self.y))
+            if(self.playersupport[i] == 2):
+                self.screen.blit(self.playerhand,(i*self.board.tilesize+self.x,self.y))
 
     #move player left or right
     def move(self,direction):
+        if self.playerturn == 0:
+            return False
         if direction >= 0:
             self.position = (self.position+1)%self.board.w
         else:
             if self.position == 0:
-                self.position = board.w-1
+                self.position = self.board.w-1
             else:
                 self.position = self.position-1
         index = self.playersupport.index(1)
         self.playersupport[index]=0
         self.playersupport[self.position]=1
-
+        return True
     #move the enemy cursor
     def moveenemy(self,newpos):
         index = self.playersupport.index(2)
@@ -168,16 +186,23 @@ class Player(Thing):
         return True
     #commit the choice
     def play(self):
-        if playerturn == 0:
+        if self.playerturn == 0:
             return False
         hplay = Factory.whichrow(self.board.board[self.position])
         if(hplay < 0):
             return False
-        self.board.setcase(self.position,hplay,BoardBox.PLAYER1)
+        if self.player == 1:
+            coin = BoardBox.PLAYER1.value
+        elif self.player == 2:
+            coin = BoardBox.PLAYER2.value
+        self.board.setcase(self.position,hplay,coin)
+        self.board.logboard(self.board.board)
         return True
+    #set the turn off
     def toggleturn(self):
-        numberofplayer = 2
-        self.playerturn= (self.playerturn +1)%numberofplayer
+        self.playerturn= (self.playerturn +1)%2
+        self.togglevisible()
+    
 
 
 ##Gui
@@ -213,6 +238,8 @@ class PlayerGUI(Text):
             rectpath = os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','assets','rect_yellow.png')
         elif self.playernumber == 1:
             rectpath = os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','assets','rect_red.png')
+        elif self.playernumber == 2:
+            rectpath = os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','assets','rect_yellow.png')
         self.rect = self.pygame.image.load(rectpath).convert()
         self.rect = self.pygame.transform.scale(self.rect,(15,15))
         #left or right ?
@@ -263,47 +290,110 @@ class Lobby(Gui):
     def log(self,message):
         return
 
-def run():
-    #initialize
-    pygame.init()
-    pygame.font.init()
-    screen = pygame.display.set_mode(Factory.windowsize(),HWSURFACE|DOUBLEBUF)#RESIZABLE
-    pygame.display.set_caption('Puissance 4')
-
-    font_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','assets','visitor2.ttf')
-    font_size = 32
-    fontobj = pygame.font.Font(font_path, font_size)
-
-    #set the Object
-    #background = pygame.image.load('background.jpg')
-    board = Board(pygame,screen)
-    p = Player(pygame,screen,board)
-    playergui1 = PlayerGUI(pygame,screen,"player 1","1367",0)
-    playergui2 = PlayerGUI(pygame,screen,"player 2","1517",1)
-
-    p.move(1)
-    print(p.position)
-    pygame.display.flip()
-
-    #less energy !
-    clock = pygame.time.Clock()
-    while True:
-        event = pygame.event.wait()
-        screen.fill((0, 0, 0))
-        board.render()
-        playergui1.render()
-        playergui2.render()
+#This class is the arbitrator of the four on the line (p4)
+class GameRuler:
+    def __init__(self,pygame,playerlist):
         
-        # Leave the game if press Quit
-        if event.type == pygame.QUIT:
-            pygame.quit()
-            break
+        self.pygame = pygame
+        self.playerlist = playerlist
+        self.pygame.init()
+        self.pygame.font.init()
+        self.screen = self.pygame.display.set_mode(Factory.windowsize(),HWSURFACE|DOUBLEBUF)#RESIZABLE
+        self.pygame.display.set_caption('Pyssance 4')
+        self.turn = 0
+        #set the Object
+        self.board = Board(self.pygame,self.screen)
+        self.w = self.board.w
+        self.h = self.board.h
+        self.nbplayers = len(playerlist)
+        self.players = []
+        self.playersgui = []
+        for i in range(self.nbplayers):
+            #le premier joueur de la liste commence
+            if i == 0:
+                playerturn = 1
+            else:
+                playerturn = 0
+            self.players.append(Player(self.pygame,self.screen,self.board,0,0,i+1,playerturn))
+            self.playersgui.append(PlayerGUI(self.pygame,self.screen,self.playerlist[i][0],str(self.playerlist[i][1]),i))
 
-        #render all
-        pygame.display.flip()
+        #self.board = Board(self.pygame,self.screen)
+        self.p = Player(self.pygame,self.screen,self.board)
+        self.clock = pygame.time.Clock()
+    #change the turn, circular on the list
+    def changeturn(self):
+        self.turn = (self.turn+1)%self.nbplayers
 
-        #wait n second
-        clock.tick(60)
+    def iswinner(self,board,tile):
+        # check horizontal spaces
+        for y in range(self.h):
+            for x in range(self.w - 3):
+                if board[x][y] == tile and board[x+1][y] == tile and board[x+2][y] == tile and board[x+3][y] == tile:
+                    return True
 
-#test run
-run()
+        # check vertical spaces
+        for x in range(self.w):
+            for y in range(self.h - 3):
+                if board[x][y] == tile and board[x][y+1] == tile and board[x][y+2] == tile and board[x][y+3] == tile:
+                    return True
+
+        # check / diagonal spaces
+        for x in range(self.w - 3):
+            for y in range(3, self.h):
+                if board[x][y] == tile and board[x+1][y-1] == tile and board[x+2][y-2] == tile and board[x+3][y-3] == tile:
+                    return True
+
+        # check \ diagonal spaces
+        for x in range(self.w - 3):
+            for y in range(self.h - 3):
+                if board[x][y] == tile and board[x+1][y+1] == tile and board[x+2][y+2] == tile and board[x+3][y+3] == tile:
+                    return True
+
+        return False
+    #main loop
+    def runlocal(self):   
+        while True:
+            event = self.pygame.event.wait()
+            self.screen.fill((0, 0, 0))
+            
+            # Leave the game if press Quit
+            if event.type == self.pygame.QUIT:
+                self.pygame.quit()
+                break
+            if event.type == KEYDOWN:
+                if event.key == K_LEFT:
+                    self.players[self.turn].move(-1)
+                elif event.key == K_RIGHT:
+                    self.players[self.turn].move(1)
+                elif event.key == K_DOWN:
+                    if self.players[self.turn].play():
+                        #the actual player gives the hand to the new player
+                        self.players[self.turn].toggleturn()
+                        if self.iswinner(self.board.board,self.players[self.turn].player):
+                            print(self.playersgui[self.turn].text+" is the winner !")
+                            self.pygame.quit()
+                            break
+                        self.changeturn()
+                        self.players[self.turn].toggleturn()
+                    
+                elif event.key == K_ESCAPE:
+                    self.pygame.quit()
+                    break
+            #refresh elt
+            
+            for i in range(self.nbplayers):
+                self.players[i].render()
+                self.playersgui[i].render()
+            self.board.render()
+            #refresh screen
+            self.pygame.display.flip()
+
+            #wait n second
+            self.clock.tick(10)
+
+def main():
+    game = GameRuler(pygame,[('Player 1',320),('Player 2','540')])
+    game.runlocal()
+
+if __name__ == '__main__':
+    main()
