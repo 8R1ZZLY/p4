@@ -33,6 +33,17 @@ class Factory():
     #window size !
     def windowsize():
         return 800, 400
+    def gameoverscreen(pygame,screen,message):
+        font_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','assets','visitor2.ttf')
+        fontobj = pygame.font.Font(font_path, 40)
+        screenw, screenh = pygame.display.get_surface().get_size()
+        textw, texth = fontobj.size(message)
+        screen.fill((0, 0, 0))
+        x= int(screenw - textw)//2
+        y= int(screenh - texth)//2
+        res = fontobj.render(message,1,(255,255,255))
+        screen.blit(res,(x,y))
+        
 
 #Thing is the very great mother class
 class Thing:
@@ -196,7 +207,7 @@ class Player(Thing):
         elif self.player == 2:
             coin = BoardBox.PLAYER2.value
         self.board.setcase(self.position,hplay,coin)
-        self.board.logboard(self.board.board)
+        
         return True
     #set the turn off
     def toggleturn(self):
@@ -293,7 +304,7 @@ class Lobby(Gui):
 #This class is the arbitrator of the four on the line (p4)
 class GameRuler:
     def __init__(self,pygame,playerlist):
-        
+        self.gamestatus = 0
         self.pygame = pygame
         self.playerlist = playerlist
         self.pygame.init()
@@ -370,21 +381,22 @@ class GameRuler:
                         #the actual player gives the hand to the new player
                         self.players[self.turn].toggleturn()
                         if self.iswinner(self.board.board,self.players[self.turn].player):
-                            print(self.playersgui[self.turn].text+" is the winner !")
-                            self.pygame.quit()
-                            break
-                        self.changeturn()
-                        self.players[self.turn].toggleturn()
+                            self.gamestatus = 1
+                        else:
+                            self.changeturn()
+                            self.players[self.turn].toggleturn()
                     
                 elif event.key == K_ESCAPE:
                     self.pygame.quit()
                     break
             #refresh elt
-            
-            for i in range(self.nbplayers):
-                self.players[i].render()
-                self.playersgui[i].render()
-            self.board.render()
+            if self.gamestatus == 0:
+                for i in range(self.nbplayers):
+                    self.players[i].render()
+                    self.playersgui[i].render()
+                self.board.render()
+            if self.gamestatus == 1:
+                Factory.gameoverscreen(self.pygame,self.screen,self.playersgui[self.turn].text+" is the winner !")
             #refresh screen
             self.pygame.display.flip()
 
