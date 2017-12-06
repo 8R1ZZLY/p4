@@ -287,20 +287,98 @@ class Img(Gui):
         super().__init__(pygame,x,y,z)
         self.img=img
 
-###Lobby to see players and score
+###Lobby to see players and score STILL TO TESSSSSSSSSSSSSSSSSSTTTTTTT
 class Lobby(Gui):
-    def __init__(self,pygame,screen,x=0,y=0,z=0,players={}):
+    def __init__(self,pygame,screen,x=0,y=0,z=0,players=[]):
         super().__init__(pygame,screen,x,y,z)
-        self.players = players
+        self.screenw, self.screenh = Factory.windowsize()
+
+        #size and position of the lobby
+        self.w = int(0.4*self.screenw)
+        self.h = int(0.8*screenh)
+        self.x = (self.screenw-self.w)//2
+        self.y = (self.screenh-self.h)//2
+        #init p and q  
+        self.pinit = 0
+        self.qinit = 8
+        #p and q are the index of the begin and end of the visible array
+        self.p = self.pinit
+        self.q = self.qinit
+        #i is the select index, it will select the player in the visible array
+        self.i = 0
+        #invisible array (out of screen)
+        self.players = players 
+        self.n = len(players)
+        #visible array, we use it to display the player in the screen
+        self.playersdisplay = self.players[p:q]
+        #text
+        self.fontsize = 32
+        font_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','assets','visitor2.ttf')
+        self.fontobj = self.pygame.font.Font(font_path, self.fontsize)
+        tmp,self.texth = self.fontobj.size("omagad")
+        #...
+        
+    #fill the visible player list
+    def fillplayers(self):
+        if p>=0 and q<=n:
+            self.playersdisplay = self.players[p:q]
+            return True
+        return False
+    #move arrow down
+    def arrowdown(self):
+        if self.i < self.q-1:
+            self.i+=1
+        else:
+            if q<n:
+                self.p+=1
+                self.q+=1
+                self.fillplayers()
+    #move arrow up
+    def arrowup(self):
+        if self.p != 0:
+            if self.i == 0:
+                self.p-=1
+                self.q-=1
+            else:
+                self.i-=1
     #ask to a player if he wanna play
     def ask(self,playerid):
+        print(self.playersdisplay[i])
         return
     #refresh the players list
     def load(self,players):
+        print("loading players")
+        self.players = players
+        self.n = len(self.players)
+        self.p = self.pinit
+        self.q = self.qinit
+        self.fillplayers()
         return
-    def log(self,message):
+    #game loop is here to let the player choose his enemy
+    def loopchoice(self):
+        while True:
+            event = self.pygame.event.wait()
+            self.screen.fill((0, 0, 0))
+            if event.type == self.pygame.QUIT:
+                self.pygame.quit()
+                break
+            if event.type == KEYDOWN:
+                if event.key == K_UP:
+                    self.arrowup()
+                elif event.key == K_DOWN:
+                    self.arrowdown()
+                elif event.key == K_ENTER:
+                    self.ask()
+                elif event.key == K_ESCAPE:
+                    self.pygame.quit()
+                    break
+    def render(self):
+        size = self.q-self.p
+        for j in range(size):
+            playername = self.fontobj.render(self.playersdisplay[i][0],1,(255,255,255))
+            self.screen.blit(playername,(self.x,self.y+j+self.texth+2))
+        #don't forget to render the arrow !
         return
-
 #This class is the arbitrator of the four on the line (p4)
 class GameRuler:
     def __init__(self,pygame,playerlist):
