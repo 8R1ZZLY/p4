@@ -129,6 +129,16 @@ class Board(Thing):
                 for j in range(self.h):
                     self.screen.blit(self.tile[self.board[i][j]],(i*self.tilesize+self.marginl,j*self.tilesize+self.margint))
 
+    #Diff entre deux boards
+    def diff(self, otherboard):
+        if len(self.board) != len(otherboard.board) or len(self.board[0]) != len(otherboard.board[0]):
+            return False
+        for row in range(otherboard):
+            for col in range(otherboard):
+                if otherboard.board[row][col] != self.board[row][col]:
+                    False
+        return True
+
 class Player(Thing):
     def __init__(self,pygame,screen,board,position=0,x=0,player=1,playerturn=1):
         super().__init__(pygame,screen,x)
