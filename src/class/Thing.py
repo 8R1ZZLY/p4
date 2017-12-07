@@ -1,5 +1,6 @@
 from enum import Enum
 import os
+import functools
 
 import pygame
 import pygame.color
@@ -289,18 +290,19 @@ class Img(Gui):
 
 ###Lobby to see players and score STILL TO TESSSSSSSSSSSSSSSSSSTTTTTTT
 class Lobby(Gui):
-    def __init__(self,pygame,screen,x=0,y=0,z=0,players=[]):
+    def __init__(self,pygame,screen,players=[],x=0,y=0,z=0):
         super().__init__(pygame,screen,x,y,z)
         self.screenw, self.screenh = Factory.windowsize()
-
+        self.pygame = pygame
+        self.screen = screen 
         #size and position of the lobby
         self.w = int(0.4*self.screenw)
-        self.h = int(0.8*screenh)
+        self.h = int(0.8*self.screenh)
         self.x = (self.screenw-self.w)//2
         self.y = (self.screenh-self.h)//2
         #init p and q  
         self.pinit = 0
-        self.qinit = 8
+        self.qinit = 13
         #p and q are the index of the begin and end of the visible array
         self.p = self.pinit
         self.q = self.qinit
@@ -309,41 +311,56 @@ class Lobby(Gui):
         #invisible array (out of screen)
         self.players = players 
         self.n = len(players)
+        if self.q >= self.n:
+            self.q = self.n
         #visible array, we use it to display the player in the screen
-        self.playersdisplay = self.players[p:q]
+        self.playersdisplay = self.players[self.p:self.q]
         #text
         self.fontsize = 32
         font_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','assets','visitor2.ttf')
         self.fontobj = self.pygame.font.Font(font_path, self.fontsize)
+        #just calculate the height in pixel of the font
         tmp,self.texth = self.fontobj.size("omagad")
+        self.arrow = self.pygame.image.load(os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','assets','arrow_right.png')).convert()
+        self.arrow = self.pygame.transform.scale(self.arrow,(self.texth,self.texth))
+        self.choosenroom = ""
         #...
         
     #fill the visible player list
     def fillplayers(self):
-        if p>=0 and q<=n:
-            self.playersdisplay = self.players[p:q]
+        if self.p>=0 and self.q<=self.n:
+            self.playersdisplay = self.players[self.p:self.q]
             return True
         return False
+
+    #render arrow
+    def renderarrow(self):
+        self.screen.blit(self.arrow,(self.x-32,self.i*self.texth+2+self.y))
+        return
     #move arrow down
     def arrowdown(self):
-        if self.i < self.q-1:
+        if self.i < self.q-self.p-1:
             self.i+=1
         else:
-            if q<n:
+            if self.q < self.n:
                 self.p+=1
                 self.q+=1
                 self.fillplayers()
     #move arrow up
     def arrowup(self):
+        if self.p == 0 and self.i != 0:
+            self.i-=1
         if self.p != 0:
             if self.i == 0:
                 self.p-=1
                 self.q-=1
+                self.fillplayers()
             else:
                 self.i-=1
     #ask to a player if he wanna play
-    def ask(self,playerid):
-        print(self.playersdisplay[i])
+    def ask(self,index):
+        print(self.playersdisplay[index][0])
+        self.choosenroom = self.playersdisplay[index][0]
         return
     #refresh the players list
     def load(self,players):
@@ -352,6 +369,8 @@ class Lobby(Gui):
         self.n = len(self.players)
         self.p = self.pinit
         self.q = self.qinit
+        if self.q >= self.n:
+            self.q = self.n
         self.fillplayers()
         return
     #game loop is here to let the player choose his enemy
@@ -367,27 +386,32 @@ class Lobby(Gui):
                     self.arrowup()
                 elif event.key == K_DOWN:
                     self.arrowdown()
-                elif event.key == K_ENTER:
-                    self.ask()
+                elif event.key == K_RETURN or event.key == K_KP_ENTER:
+                    self.ask(self.i)
+                    #call GameRuler here 
                 elif event.key == K_ESCAPE:
                     self.pygame.quit()
                     break
+            self.render()
+            #refresh screen
+            self.pygame.display.flip()
     def render(self):
         size = self.q-self.p
+        #render lobby
         for j in range(size):
-            playername = self.fontobj.render(self.playersdisplay[i][0],1,(255,255,255))
-            self.screen.blit(playername,(self.x,self.y+j+self.texth+2))
-        #don't forget to render the arrow !
+            roomsplayers = functools.reduce(lambda x,y:str(x)+" "+str(y),self.playersdisplay[j][1])
+            playername = self.fontobj.render(self.playersdisplay[j][0]+': '+roomsplayers,1,(255,255,255))
+            self.screen.blit(playername,(self.x,self.y+j*self.texth+2))
+        #render arrow
+        self.renderarrow()
         return
 #This class is the arbitrator of the four on the line (p4)
 class GameRuler:
-    def __init__(self,pygame,playerlist):
+    def __init__(self,pygame,screen,playerlist):
         self.gamestatus = 0
         self.pygame = pygame
         self.playerlist = playerlist
-        self.pygame.init()
-        self.pygame.font.init()
-        self.screen = self.pygame.display.set_mode(Factory.windowsize(),HWSURFACE|DOUBLEBUF)#RESIZABLE
+        self.screen = screen
         self.pygame.display.set_caption('Pyssance 4')
         self.turn = 0
         #set the Object
@@ -405,46 +429,40 @@ class GameRuler:
                 playerturn = 0
             self.players.append(Player(self.pygame,self.screen,self.board,0,0,i+1,playerturn))
             self.playersgui.append(PlayerGUI(self.pygame,self.screen,self.playerlist[i][0],str(self.playerlist[i][1]),i))
-
         #self.board = Board(self.pygame,self.screen)
         self.p = Player(self.pygame,self.screen,self.board)
         self.clock = pygame.time.Clock()
     #change the turn, circular on the list
     def changeturn(self):
         self.turn = (self.turn+1)%self.nbplayers
-
+    #check if the player (tile) is the winner
     def iswinner(self,board,tile):
         # check horizontal spaces
         for y in range(self.h):
             for x in range(self.w - 3):
                 if board[x][y] == tile and board[x+1][y] == tile and board[x+2][y] == tile and board[x+3][y] == tile:
                     return True
-
         # check vertical spaces
         for x in range(self.w):
             for y in range(self.h - 3):
                 if board[x][y] == tile and board[x][y+1] == tile and board[x][y+2] == tile and board[x][y+3] == tile:
                     return True
-
         # check / diagonal spaces
         for x in range(self.w - 3):
             for y in range(3, self.h):
                 if board[x][y] == tile and board[x+1][y-1] == tile and board[x+2][y-2] == tile and board[x+3][y-3] == tile:
                     return True
-
         # check \ diagonal spaces
         for x in range(self.w - 3):
             for y in range(self.h - 3):
                 if board[x][y] == tile and board[x+1][y+1] == tile and board[x+2][y+2] == tile and board[x+3][y+3] == tile:
                     return True
-
         return False
     #main loop
-    def runlocal(self):   
+    def runlocal(self):
         while True:
             event = self.pygame.event.wait()
             self.screen.fill((0, 0, 0))
-            
             # Leave the game if press Quit
             if event.type == self.pygame.QUIT:
                 self.pygame.quit()
@@ -482,8 +500,16 @@ class GameRuler:
             self.clock.tick(10)
 
 def main():
-    game = GameRuler(pygame,[('Player 1',320),('Player 2','540')])
-    game.runlocal()
+    pygame.init()
+    pygame.font.init()
+    screen = pygame.display.set_mode(Factory.windowsize(),HWSURFACE|DOUBLEBUF)#RESIZABLE
+    #game = GameRuler(pygame,screen,[('Player 1',320),('Player 2','540')])
+    #game.runlocal()
+    #pygame,screen,x=0,y=0,z=0,players=[]
+    players = [['ROOM'+str(i),["player"+str(j) for j in range(2) ]] for i in range(40)]
+    lobby = Lobby(pygame,screen,players)
+    lobby.loopchoice()
+
 
 if __name__ == '__main__':
     main()
