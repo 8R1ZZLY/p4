@@ -7,6 +7,7 @@ import pygame.color
 import os
 from pygame.locals import *
 
+from client import Client
 
 
 #Enumeration
@@ -98,7 +99,7 @@ class Board(Thing):
         # w columns and h rows
         #self.board = [[0,0,0,0,0,1],[0,0,0,0,0,2],[0,0,0,0,0,2],[0,0,0,0,0,2],[0,0,0,0,1,1],[0,0,0,0,1,2],[0,0,0,0,0,1]]
         self.board = [[0 for i in range(self.h)] for j in range(self.w)]
-        
+
     #load 
     def load(self,board):
         #parse and construct the board
@@ -139,6 +140,8 @@ class Board(Thing):
                     False
         return True
 
+
+##Player is the visible arrow which you can play
 class Player(Thing):
     def __init__(self,pygame,screen,board,position=0,x=0,player=1,playerturn=1):
         super().__init__(pygame,screen,x)
@@ -298,13 +301,13 @@ class Img(Gui):
         super().__init__(pygame,x,y,z)
         self.img=img
 
-###Lobby to see players and score STILL TO TESSSSSSSSSSSSSSSSSSTTTTTTT
+###Lobby to see players and score
 class Lobby(Gui):
     def __init__(self,pygame,screen,players=[],x=0,y=0,z=0):
         super().__init__(pygame,screen,x,y,z)
         self.screenw, self.screenh = Factory.windowsize()
         self.pygame = pygame
-        self.screen = screen 
+        self.screen = screen
         #size and position of the lobby
         self.w = int(0.4*self.screenw)
         self.h = int(0.8*self.screenh)
@@ -398,7 +401,7 @@ class Lobby(Gui):
                     self.arrowdown()
                 elif event.key == K_RETURN or event.key == K_KP_ENTER:
                     self.ask(self.i)
-                    #call GameRuler here 
+                    #call GameRuler here
                 elif event.key == K_ESCAPE:
                     self.pygame.quit()
                     break
