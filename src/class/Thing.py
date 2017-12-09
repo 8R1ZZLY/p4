@@ -141,6 +141,74 @@ class Board(Thing):
         return True
 
 
+##PlayerServer
+class PlayerServer(Thing):
+    def __init__(self,pygame,screen,board,client,position=0,x=0,player=1,playerturn=1):
+        super().__init__(pygame,screen,x)
+        self.pygame = pygame
+        self.screen = screen
+        self.client = client
+        self.player = player
+        self.position = position
+        self.board = board
+        self.playerturn = playerturn
+        if self.playerturn == 0:
+            self.togglevisible()
+        self.screenw , self.screenh = Factory.windowsize()
+        self.playersupport = [0]*self.board.w  #it is an array to choose the column to play
+        self.playersupport[0]=1
+        
+        if player == 1:
+            self.playerhand = self.pygame.image.load(os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','assets','arrow_p1.png')).convert()
+        elif player == 2:
+            self.playerhand = self.pygame.image.load(os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','assets','arrow_p2.png')).convert()
+        elif player == 3:
+            self.playerhand = self.pygame.image.load(os.path.join(os.path.dirname(os.path.realpath(__file__)),'..','assets','arrow_p3.png')).convert()
+        
+        self.playerhand = self.pygame.transform.scale(self.playerhand,(self.board.tilesize,self.board.tilesize))
+        self.width = int(0.4*self.screenw)
+        self.height = self.board.tilesize
+
+        self.x = int((self.screenw-self.width))//2
+        self.y = 5
+
+    def render(self):
+        if(self.isvisible()):
+            self.playerhand.set_alpha(255)
+        else:
+            self.playerhand.set_alpha(50)
+
+        for i in range(self.board.w):
+            if(self.playersupport[i] == 1):
+                self.screen.blit(self.playerhand,(i*self.board.tilesize+self.x,self.y))
+            if(self.playersupport[i] == 2):
+                self.screen.blit(self.playerhand,(i*self.board.tilesize+self.x,self.y))
+
+    #listen the server: if we receive board we fill it and we wait for the move instruction
+    def listen(self):
+        while True:    
+            if self.client.listen() == "move":
+                break
+            elif self.client.listen() == "board":
+                self.board.board = self.client.board
+
+    #send your move to the server
+    def send(self,mv):
+        self.client.sendMove(mv)
+
+    #setposition from outside
+    def setposition(self,position):
+        if position < 0 and position >= self.board.w:
+            return False
+        self.position = position
+        index = self.playersupport.index(1)
+        self.playersupport[index]=0
+        self.playersupport[self.position]=1
+        return True
+    
+        
+    
+
 ##Player is the visible arrow which you can play
 class Player(Thing):
     def __init__(self,pygame,screen,board,position=0,x=0,player=1,playerturn=1):
@@ -197,7 +265,7 @@ class Player(Thing):
         self.playersupport[index]=0
         self.playersupport[self.position]=1
         return True
-    #move the enemy cursor
+    #move the enemy's cursor
     def moveenemy(self,newpos):
         index = self.playersupport.index(2)
         self.playersupport[index] = 0
@@ -421,6 +489,7 @@ class Lobby(Gui):
 #This class is the arbitrator of the four on the line (p4)
 class GameRuler:
     def __init__(self,pygame,screen,playerlist):
+        self.rooms = []
         self.gamestatus = 0
         self.pygame = pygame
         self.playerlist = playerlist
@@ -471,7 +540,26 @@ class GameRuler:
                 if board[x][y] == tile and board[x+1][y+1] == tile and board[x+2][y+2] == tile and board[x+3][y+3] == tile:
                     return True
         return False
-    #main loop
+
+
+    #main loop online
+    def runonline(self):
+        client = Client('coucou','coucou')
+        self.rooms = client.rooms
+        #choose a room
+        lobby = Lobby(pygame,screen,rooms)
+        lobby.loopchoice()
+        lobby.choosenroom
+        # -1 pour creer une room
+        actualroom = client.initRoom(lobby.choosenroom)
+        #get the color
+        mycolor = client.color
+        starter = client.begin
+        #start the game loop
+        while True:
+            pass
+        #HEEEERRRREEEEEEEE
+    #main loop local
     def runlocal(self):
         while True:
             event = self.pygame.event.wait()
@@ -516,12 +604,12 @@ def main():
     pygame.init()
     pygame.font.init()
     screen = pygame.display.set_mode(Factory.windowsize(),HWSURFACE|DOUBLEBUF)#RESIZABLE
-    #game = GameRuler(pygame,screen,[('Player 1',320),('Player 2','540')])
-    #game.runlocal()
+    game = GameRuler(pygame,screen,[('Player 1',320),('Player 2','540')])
+    game.runlocal()
     #pygame,screen,x=0,y=0,z=0,players=[]
-    players = [['ROOM'+str(i),["player"+str(j) for j in range(2) ]] for i in range(40)]
-    lobby = Lobby(pygame,screen,players)
-    lobby.loopchoice()
+    #players = [['ROOM'+str(i),["player"+str(j) for j in range(2) ]] for i in range(40)]
+    #lobby = Lobby(pygame,screen,players)
+    #lobby.loopchoice()
 
 
 if __name__ == '__main__':
