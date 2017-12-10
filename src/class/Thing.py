@@ -481,7 +481,7 @@ class Lobby(Gui):
         #render lobby
         for j in range(size):
             roomsplayers = functools.reduce(lambda x,y:str(x)+" "+str(y),self.playersdisplay[j][1])
-            playername = self.fontobj.render(self.playersdisplay[j][0]+': '+roomsplayers,1,(255,255,255))
+            playername = self.fontobj.render(str(self.playersdisplay[j][0])+': '+roomsplayers,1,(255,255,255))
             self.screen.blit(playername,(self.x,self.y+j*self.texth+2))
         #render arrow
         self.renderarrow()
@@ -553,7 +553,7 @@ class GameRuler:
         client = Client(username,password)
         self.rooms = client.rooms
         #choose a room
-        lobby = Lobby(self.pygame,self.screen,rooms)
+        lobby = Lobby(self.pygame,self.screen,self.rooms)
         enemyname = lobby.loopchoice()
         lobby.choosenroom
         # -1 pour creer une room
@@ -561,6 +561,7 @@ class GameRuler:
         #get the color
         mycolor = client.color
         starter = client.begin
+        print("JERRY: color:"+mycolor+" begin:"+starter)
         ibegin = 0
         if mycolor == starter:
             ibegin = 1
@@ -568,6 +569,7 @@ class GameRuler:
         self.turn = ibegin
         #initialize the online game with the information of the server
         while True:
+            print("JERRY: ONWAITING")
             if client.listen() == "move":
                 break
             elif client.listen() == "board":
@@ -579,6 +581,12 @@ class GameRuler:
                 megui = PlayerGUI(self.pygame,self.screen,username,str('score: 0000'),ibegin)
                 enemy = PlayerServer(self.pygame,self.screen,self.board,client,0,0,ebegin+1,ebegin)
                 enemygui = PlayerGUI(self.pygame,self.screen,enemyname,str('score: 0000'),ebegin)
+                me.render()
+                megui.render()
+                enemy.render()
+                enemygui.render()
+                self.board.render()
+                self.pygame.display.flip()
         #start the game loop
         while True:
             self.screen.fill((0, 0, 0))
@@ -684,13 +692,16 @@ def main():
     pygame.init()
     pygame.font.init()
     screen = pygame.display.set_mode(Factory.windowsize(),HWSURFACE|DOUBLEBUF)#RESIZABLE
-    game = GameRuler(pygame,screen,[('Player 1',320),('Player 2','540')])
-    game.runlocal()
+    #game = GameRuler(pygame,screen,[('Player 1',320),('Player 2','540')])
+    #game.runlocal()
     #pygame,screen,x=0,y=0,z=0,players=[]
     #players = [['ROOM'+str(i),["player"+str(j) for j in range(2) ]] for i in range(40)]
     #lobby = Lobby(pygame,screen,players)
     #lobby.loopchoice()
 
+    #test online
+    game = GameRuler(pygame,screen)
+    game.runonline()
 
 if __name__ == '__main__':
     main()
