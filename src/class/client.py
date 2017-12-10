@@ -46,7 +46,7 @@ class Client(object):
     def initRoom(self, ide):
        # room = input("voulez vous créer (c) ou rejoindre (r)\n")[0]
         
-        if ide < 1 or self.rooms == []:
+        if ide < 0 or self.rooms == []:
             print("crée")
             self.protocole.createRoom()
             self.room = self.protocole.receiveAnswerRoom()

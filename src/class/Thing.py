@@ -469,7 +469,9 @@ class Lobby(Gui):
                     self.arrowdown()
                 elif event.key == K_RETURN or event.key == K_KP_ENTER:
                     return self.ask(self.i)
-                    #call GameRuler here
+                elif event.key == K_c:
+                    self.choosenroom = -1
+                    return ""
                 elif event.key == K_ESCAPE:
                     self.pygame.quit()
                     break
@@ -573,14 +575,16 @@ class GameRuler:
             if client.listen() == "move":
                 break
             elif client.listen() == "board":
+                self.screen.fill((0, 0, 0))
                 w = len(client.board)
                 h = len(client.board[0])
                 self.initboard(w,h)
                 self.board.board = client.board
                 me = Player(self.pygame,self.screen,self.board,0,0,ibegin+1,ibegin)
                 megui = PlayerGUI(self.pygame,self.screen,username,str('score: 0000'),ibegin)
-                enemy = PlayerServer(self.pygame,self.screen,self.board,client,0,0,ebegin+1,ebegin)
-                enemygui = PlayerGUI(self.pygame,self.screen,enemyname,str('score: 0000'),ebegin)
+                if lobby.choosenroom >= 0:
+                    enemy = PlayerServer(self.pygame,self.screen,self.board,client,0,0,ebegin+1,ebegin)
+                    enemygui = PlayerGUI(self.pygame,self.screen,enemyname,str('score: 0000'),ebegin)
                 me.render()
                 megui.render()
                 enemy.render()
