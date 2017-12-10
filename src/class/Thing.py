@@ -442,7 +442,7 @@ class Lobby(Gui):
     def ask(self,index):
         print(self.playersdisplay[index][0])
         self.choosenroom = self.playersdisplay[index][0]
-        return
+        return self.playersdisplay[index][1][0]
     #refresh the players list
     def load(self,players):
         print("loading players")
@@ -454,7 +454,7 @@ class Lobby(Gui):
             self.q = self.n
         self.fillplayers()
         return
-    #game loop is here to let the player choose his enemy
+    #game loop is here to let the player choose his enemy. it returns the name of the player
     def loopchoice(self):
         while True:
             event = self.pygame.event.wait()
@@ -468,7 +468,7 @@ class Lobby(Gui):
                 elif event.key == K_DOWN:
                     self.arrowdown()
                 elif event.key == K_RETURN or event.key == K_KP_ENTER:
-                    self.ask(self.i)
+                    return self.ask(self.i)
                     #call GameRuler here
                 elif event.key == K_ESCAPE:
                     self.pygame.quit()
@@ -488,7 +488,7 @@ class Lobby(Gui):
         return
 #This class is the arbitrator of the four on the line (p4)
 class GameRuler:
-    def __init__(self,pygame,screen,playerlist):
+    def __init__(self,pygame,screen,playerlist=[]):
         self.rooms = []
         self.gamestatus = 0
         self.pygame = pygame
@@ -501,20 +501,24 @@ class GameRuler:
         self.w = self.board.w
         self.h = self.board.h
         self.nbplayers = len(playerlist)
+        #online case
+        if not playerlist:
+            self.nbplayers = 2
         self.players = []
         self.playersgui = []
-        for i in range(self.nbplayers):
-            #le premier joueur de la liste commence
-            if i == 0:
-                playerturn = 1
-            else:
-                playerturn = 0
-            self.players.append(Player(self.pygame,self.screen,self.board,0,0,i+1,playerturn))
-            self.playersgui.append(PlayerGUI(self.pygame,self.screen,self.playerlist[i][0],str(self.playerlist[i][1]),i))
+        
         #self.board = Board(self.pygame,self.screen)
-        self.p = Player(self.pygame,self.screen,self.board)
+        #self.p = Player(self.pygame,self.screen,self.board)
         self.clock = pygame.time.Clock()
     #change the turn, circular on the list
+    def initboard(self,w=7,h=6):
+        self.board = Board(self.pygame,self.screen,0,0,0,w,h)
+        self.w = self.board.w
+        self.h = self.board.h
+        self.nbplayers = len(self.playerlist)
+        #online case
+        if not playerlist:
+            self.nbplayers = 2
     def changeturn(self):
         self.turn = (self.turn+1)%self.nbplayers
     #check if the player (tile) is the winner
@@ -544,23 +548,100 @@ class GameRuler:
 
     #main loop online
     def runonline(self):
-        client = Client('coucou','coucou')
+        username = 'coucou'
+        password = 'coucou'
+        client = Client(username,password)
         self.rooms = client.rooms
         #choose a room
-        lobby = Lobby(pygame,screen,rooms)
-        lobby.loopchoice()
+        lobby = Lobby(self.pygame,self.screen,rooms)
+        enemyname = lobby.loopchoice()
         lobby.choosenroom
         # -1 pour creer une room
         actualroom = client.initRoom(lobby.choosenroom)
         #get the color
         mycolor = client.color
         starter = client.begin
+        ibegin = 0
+        if mycolor == starter:
+            ibegin = 1
+        ebegin = (ibegin + 1)%2
+        self.turn = ibegin
+        #initialize the online game with the information of the server
+        while True:
+            if client.listen() == "move":
+                break
+            elif client.listen() == "board":
+                w = len(client.board)
+                h = len(client.board[0])
+                self.initboard(w,h)
+                self.board.board = client.board
+                me = Player(self.pygame,self.screen,self.board,0,0,ibegin+1,ibegin)
+                megui = PlayerGUI(self.pygame,self.screen,username,str('score: 0000'),ibegin)
+                enemy = PlayerServer(self.pygame,self.screen,self.board,client,0,0,ebegin+1,ebegin)
+                enemygui = PlayerGUI(self.pygame,self.screen,enemyname,str('score: 0000'),ebegin)
         #start the game loop
         while True:
-            pass
-        #HEEEERRRREEEEEEEE
+            self.screen.fill((0, 0, 0))
+            #if this client begins
+            if self.turn == 0:
+                event = self.pygame.event.wait()
+                if event.type == self.pygame.QUIT:
+                    self.pygame.quit()
+                    break
+                if event.type == KEYDOWN:
+                    if event.key == K_LEFT:
+                        me.move(-1)
+                    elif event.key == K_RIGHT:
+                        me.move(1)
+                    elif event.key == K_DOWN:
+                        if me.play():
+                            #the actual player gives the hand to the other player
+                            me.toggleturn()
+                            if self.iswinner(self.board.board,me.player):
+                                self.gamestatus = 1
+                                winner = username
+                            else:
+                                self.changeturn()
+                                me.toggleturn()
+                                #send the position
+                                enemy.send(me.position)
+                    elif event.key == K_ESCAPE:
+                        self.pygame.quit()
+                        break
+            #if enemy begins
+            elif self.turn == 1:
+                enemy.listen()
+                if self.iswinner(self.board.board,me.player):
+                    self.gamestatus = 1
+                    winner = enemyname
+                else:
+                    self.changeturn()
+                    me.toggleturn()
+            #refresh elt
+            if self.gamestatus == 0:
+                me.render()
+                megui.render()
+                enemy.render()
+                enemygui.render()
+                self.board.render()
+            if self.gamestatus == 1:
+                Factory.gameoverscreen(self.pygame,self.screen,winner+" is the winner !")
+            #refresh screen
+            self.pygame.display.flip()
+            #free proc
+            self.clock.tick(10)
+    
     #main loop local
     def runlocal(self):
+        self.initboard()
+        for i in range(self.nbplayers):
+            #le premier joueur de la liste commence
+            if i == 0:
+                playerturn = 1
+            else:
+                playerturn = 0
+            self.players.append(Player(self.pygame,self.screen,self.board,0,0,i+1,playerturn))
+            self.playersgui.append(PlayerGUI(self.pygame,self.screen,self.playerlist[i][0],str(self.playerlist[i][1]),i))
         while True:
             event = self.pygame.event.wait()
             self.screen.fill((0, 0, 0))
@@ -596,7 +677,6 @@ class GameRuler:
                 Factory.gameoverscreen(self.pygame,self.screen,self.playersgui[self.turn].text+" is the winner !")
             #refresh screen
             self.pygame.display.flip()
-
             #wait n second
             self.clock.tick(10)
 
