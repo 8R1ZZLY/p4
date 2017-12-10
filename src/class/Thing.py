@@ -1,7 +1,6 @@
 from enum import Enum
 import os
 import functools
-
 import pygame
 import pygame.color
 import os
@@ -128,7 +127,13 @@ class Board(Thing):
         if self.isvisible():
             for i in range(self.w):
                 for j in range(self.h):
-                    self.screen.blit(self.tile[self.board[i][j]],(i*self.tilesize+self.marginl,j*self.tilesize+self.margint))
+                    case = self.board[i][j]
+                    indice = 0
+                    if case == 'X':
+                        indice = 1
+                    elif case == 'O':
+                        indice = 2
+                    self.screen.blit(self.tile[indice],(i*self.tilesize+self.marginl,j*self.tilesize+self.margint))
 
     #Diff entre deux boards
     def diff(self, otherboard):
@@ -504,6 +509,7 @@ class GameRuler:
         self.h = self.board.h
         self.nbplayers = len(playerlist)
         #online case
+        self.playerlist =[]
         if not playerlist:
             self.nbplayers = 2
         self.players = []
@@ -517,10 +523,13 @@ class GameRuler:
         self.board = Board(self.pygame,self.screen,0,0,0,w,h)
         self.w = self.board.w
         self.h = self.board.h
-        self.nbplayers = len(self.playerlist)
-        #online case
-        if not playerlist:
+        if not self.playerlist:
+            #online case
             self.nbplayers = 2
+        else:
+            self.nbplayers = len(self.playerlist)
+        
+        
     def changeturn(self):
         self.turn = (self.turn+1)%self.nbplayers
     #check if the player (tile) is the winner
@@ -569,30 +578,37 @@ class GameRuler:
             ibegin = 1
         ebegin = (ibegin + 1)%2
         self.turn = ibegin
+        
         #initialize the online game with the information of the server
         while True:
             print("JERRY: ONWAITING")
-            if client.listen() == "move":
+            
+            rep = client.listen()
+            if rep == "move":
                 break
-            elif client.listen() == "board":
+            elif rep == "board":
                 self.screen.fill((0, 0, 0))
-                w = len(client.board)
-                h = len(client.board[0])
-                self.initboard(w,h)
-                self.board.board = client.board
+                wi = client.board[0]
+                he = client.board[1]
+                self.initboard(wi,he)
+                self.board.board = client.board[2]
                 me = Player(self.pygame,self.screen,self.board,0,0,ibegin+1,ibegin)
                 megui = PlayerGUI(self.pygame,self.screen,username,str('score: 0000'),ibegin)
+                enemy = PlayerServer(self.pygame,self.screen,self.board,client,0,0,ebegin+1,ebegin)
                 if lobby.choosenroom >= 0:
-                    enemy = PlayerServer(self.pygame,self.screen,self.board,client,0,0,ebegin+1,ebegin)
-                    enemygui = PlayerGUI(self.pygame,self.screen,enemyname,str('score: 0000'),ebegin)
+                    enemyname = "Player 2"
+                enemygui = PlayerGUI(self.pygame,self.screen,enemyname,str('score: 0000'),ebegin)
                 me.render()
                 megui.render()
                 enemy.render()
                 enemygui.render()
+
                 self.board.render()
                 self.pygame.display.flip()
+        ############## DEBUT DU CODE NON TESTE ######################
         #start the game loop
         while True:
+            print("JERRY: jeu")
             self.screen.fill((0, 0, 0))
             #if this client begins
             if self.turn == 0:
