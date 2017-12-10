@@ -6,7 +6,7 @@ import pygame.color
 import os
 from pygame.locals import *
 
-from client import Client
+from src.classes.client import Client
 
 
 #Enumeration
@@ -129,11 +129,8 @@ class Board(Thing):
                 for j in range(self.h):
                     case = self.board[i][j]
                     indice = 0
-                    if case == 'X':
-                        indice = 1
-                    elif case == 'O':
-                        indice = 2
-                    self.screen.blit(self.tile[indice],(i*self.tilesize+self.marginl,j*self.tilesize+self.margint))
+
+                    self.screen.blit(self.tile[case],(i*self.tilesize+self.marginl,j*self.tilesize+self.margint))
 
     #Diff entre deux boards
     def diff(self, otherboard):
@@ -509,7 +506,7 @@ class GameRuler:
         self.h = self.board.h
         self.nbplayers = len(playerlist)
         #online case
-        self.playerlist =[]
+        self.playerlist =playerlist
         if not playerlist:
             self.nbplayers = 2
         self.players = []
@@ -523,7 +520,7 @@ class GameRuler:
         self.board = Board(self.pygame,self.screen,0,0,0,w,h)
         self.w = self.board.w
         self.h = self.board.h
-        if not self.playerlist:
+        if  len(self.playerlist) == 0:
             #online case
             self.nbplayers = 2
         else:
@@ -558,9 +555,9 @@ class GameRuler:
 
 
     #main loop online
-    def runonline(self):
-        username = 'coucou'
-        password = 'coucou'
+    def runonline(self,user='coucou',passwd='coucou'):
+        username = user
+        password = passwd   
         client = Client(username,password)
         self.rooms = client.rooms
         #choose a room
@@ -572,7 +569,7 @@ class GameRuler:
         #get the color
         mycolor = client.color
         starter = client.begin
-        print("JERRY: color:"+mycolor+" begin:"+starter)
+        print("MG: color:"+mycolor+" begin:"+starter)
         ibegin = 0
         if mycolor == starter:
             ibegin = 1
@@ -581,9 +578,8 @@ class GameRuler:
         
         #initialize the online game with the information of the server
         while True:
-            print("JERRY: ONWAITING")
-            
             rep = client.listen()
+            print("MG "+rep+" ", end='')
             if rep == "move":
                 break
             elif rep == "board":
@@ -602,13 +598,12 @@ class GameRuler:
                 megui.render()
                 enemy.render()
                 enemygui.render()
-
                 self.board.render()
                 self.pygame.display.flip()
-        ############## DEBUT DU CODE NON TESTE ######################
+        ############## 19h30 ######################
         #start the game loop
         while True:
-            print("JERRY: jeu")
+            print("MG: jeu")
             self.screen.fill((0, 0, 0))
             #if this client begins
             if self.turn == 0:
@@ -661,6 +656,7 @@ class GameRuler:
     
     #main loop local
     def runlocal(self):
+        
         self.initboard()
         for i in range(self.nbplayers):
             #le premier joueur de la liste commence
@@ -671,6 +667,7 @@ class GameRuler:
             self.players.append(Player(self.pygame,self.screen,self.board,0,0,i+1,playerturn))
             self.playersgui.append(PlayerGUI(self.pygame,self.screen,self.playerlist[i][0],str(self.playerlist[i][1]),i))
         while True:
+            
             event = self.pygame.event.wait()
             self.screen.fill((0, 0, 0))
             # Leave the game if press Quit
@@ -712,6 +709,7 @@ def main():
     pygame.init()
     pygame.font.init()
     screen = pygame.display.set_mode(Factory.windowsize(),HWSURFACE|DOUBLEBUF)#RESIZABLE
+    
     #game = GameRuler(pygame,screen,[('Player 1',320),('Player 2','540')])
     #game.runlocal()
     #pygame,screen,x=0,y=0,z=0,players=[]

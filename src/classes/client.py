@@ -1,4 +1,4 @@
-from protocole import Protocole
+from src.classes.protocole import Protocole
 import re
 
 class Client(object):
